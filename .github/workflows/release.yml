@@ -1,0 +1,42 @@
+name: Compile release cross-compatible binaries without having to install python
+
+on:
+  push:
+    tags: [ 'v*.*.*' ]
+
+jobs:
+  build:
+    runs-on: ${{ matrix.builds.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        builds:
+          - os: 'windows-latest'
+            name: 'win'
+          - os: 'ubuntu-latest'
+            name: 'linux'
+          - os: 'macos-latest'
+            name: 'darwin'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Compile executables with pyinstaller
+        run: pyinstaller -F proxy-scrapper.py -n proxy-scrapper-${{ matrix.builds.name }}
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

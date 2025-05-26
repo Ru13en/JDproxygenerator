@@ -1,0 +1,45 @@
+name: Compile cross-compatible binaries without having to install python
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    if: false
+    runs-on: ${{ matrix.builds.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        builds:
+          - os: 'windows-latest'
+            name: 'win'
+          - os: 'ubuntu-latest'
+            name: 'linux'
+          - os: 'macos-latest'
+            name: 'darwin'
+
+    steps:
+      - name: Get Short SHA
+        run: echo "SHORT_SHA=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_ENV
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt pyinstaller
+
+      - name: Compile executables with pyinstaller
+        run: pyinstaller -F proxy-scrapper.py
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: proxy-scrapper-${{ matrix.builds.name }}-${{ env.SHORT_SHA }}
+          path: dist/*
